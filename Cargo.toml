@@ -1,0 +1,10 @@
+[package]
+name = "ferro_cell"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mnist = { git = "https://github.com/jesper-olsen/mnist-rs.git" }
+mersenne-twister-rs = {git = "https://github.com/jesper-olsen/mersenne-twister-rs"}
+engram = { git = "https://github.com/jesper-olsen/engram.git" }
+
