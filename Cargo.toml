@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 mnist = { git = "https://github.com/jesper-olsen/mnist-rs.git" }
+stmc_rs = { git = "https://github.com/jesper-olsen/stmc-rs", branch = "master" }
 mersenne-twister-rs = {git = "https://github.com/jesper-olsen/mersenne-twister-rs"}
 engram = { git = "https://github.com/jesper-olsen/engram.git" }
 

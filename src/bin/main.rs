@@ -1,39 +1,52 @@
-use engram::slide_3x3_window;
+use ferro_cell::perceptron::Perceptron;
 use mnist::{Mnist, error::MnistError};
-use std::array;
+use stmc_rs::marsaglia::Marsaglia;
 
-fn print_patch(key: u16) {
-    let pattern: [_; 9] = array::from_fn(|i| if (key >> i) & 1 == 1 { 'X' } else { '.' });
-    println!("Pattern {key}:");
-    println!("{}{}{}", pattern[0], pattern[1], pattern[2]);
-    println!("{}{}{}", pattern[3], pattern[4], pattern[5]);
-    println!("{}{}{}", pattern[6], pattern[7], pattern[8]);
-}
+//fn calc_stat(model: &Perceptron<784, 10>) {
+//    for (i, row) in model.weights.iter().enumerate() {
+//        let max = row.iter().map(|&w| w.abs()).max().unwrap();
+//        let avg = row.iter().map(|&w| w.abs() as f64).sum::<f64>() / row.len() as f64;
+//        println!("  Weights: Class {i}: max_abs={max:>6}, avg_abs={avg:>8.2}");
+//    }
+//}
 
 fn main() -> Result<(), MnistError> {
-    let mut cfg = [[0u64; 512]; 10];
+    let mut rng = Marsaglia::new(42, 0, 0, 0);
     let data = Mnist::load("MNIST")?;
-    for (image, label) in data.train_images.iter().zip(data.train_labels.iter()) {
-        for patch in slide_3x3_window(image) {
-            //println!("patch at {},{}", patch.x, patch.y);
-            let mut u: u16 = 0;
-            for i in 0..9 {
-                if patch.pixels[i] > 25 {
-                    u |= 1 << i
-                }
-            }
-            cfg[*label as usize][u as usize] += 1;
+
+    // collect pixels into owned arrays
+    let mut train_images: Vec<[f64; 784]> = data.train_images.iter().map(|img| img.as_f64_array()).collect();
+    let test_images: Vec<[f64; 784]> = data.test_images.iter().map(|img| img.as_f64_array()).collect();
+    let mut train_labels: Vec<u8> = data.train_labels.clone();
+    let mut model = Perceptron::<784, 10>::new(&mut rng);
+
+    const MAX_EPOCHS: usize = 5;
+    for epoch in 0..MAX_EPOCHS {
+        // Shuffle training samples
+        let n = train_images.len();
+        for i in (1..n).rev() {
+            let j = (rng.uni() * (i + 1) as f64) as usize;
+            train_images.swap(i, j);
+            train_labels.swap(i, j);
         }
+
+        let lr = 1.0;
+        let err = model.train(&train_images, &train_labels, lr);
+        println!("Epoch {epoch}: error rate = {:.3}", err);
+
+        //calc_stat(&model);
+
     }
 
-    for i in 0..512 {
-        //let has_center_ink = (i >> 4) & 1 == 1;
-        print_patch(i as u16);
-        for j in 0..10 {
-            print!("D{j}: {:6} ", cfg[j][i]);
-        }
-        println!("\n-----------------");
-    }
+    let correct = test_images
+        .iter()
+        .zip(data.test_labels.iter())
+        .filter(|(image, label)| model.classify(*image) == **label as usize)
+        .count();
+    let total = data.test_images.len();
+    let acc = 100.0 * correct as f64 / total as f64;
+
+    println!("Accuracy: {correct}/{total} = {acc:.2}%");
 
     Ok(())
 }
