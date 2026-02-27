@@ -1,5 +1,5 @@
 [package]
-name = "ferro_cell"
+name = "perceptron"
 version = "0.1.0"
 edition = "2024"
 
@@ -8,4 +8,5 @@ mnist = { git = "https://github.com/jesper-olsen/mnist-rs.git" }
 stmc_rs = { git = "https://github.com/jesper-olsen/stmc-rs", branch = "master" }
 mersenne-twister-rs = {git = "https://github.com/jesper-olsen/mersenne-twister-rs"}
 engram = { git = "https://github.com/jesper-olsen/engram.git" }
+clap = { version = "4.5.60", features = ["derive"] }
 

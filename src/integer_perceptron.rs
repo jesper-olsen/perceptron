@@ -2,7 +2,6 @@ use std::array;
 use stmc_rs::marsaglia::Marsaglia;
 
 pub struct IntegerPerceptron<const IDIM: usize, const ODIM: usize> {
-    // Using i32 for weights to allow for growth during training
     pub weights: [[i32; IDIM]; ODIM],
 }
 

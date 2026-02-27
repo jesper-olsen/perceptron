@@ -1,58 +1,76 @@
-//use ferro_cell::perceptron::Perceptron;
-use ferro_cell::integer_perceptron::IntegerPerceptron;
+use clap::Parser;
 use mnist::{Mnist, error::MnistError};
+use perceptron::integer_perceptron::IntegerPerceptron;
 use stmc_rs::marsaglia::Marsaglia;
 
-//fn calc_stat(model: &Perceptron<784, 10>) {
-//    for (i, row) in model.weights.iter().enumerate() {
-//        let max = row.iter().map(|&w| w.abs()).max().unwrap();
-//        let avg = row.iter().map(|&w| w.abs() as f64).sum::<f64>() / row.len() as f64;
-//        println!("  Weights: Class {i}: max_abs={max:>6}, avg_abs={avg:>8.2}");
-//    }
-//}
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(long, default_value_t = 1)]
+    /// Number of classifiers in ensemble
+    pub ensemble_size: usize,
+}
 
-fn main() -> Result<(), MnistError> {
+const MAX_EPOCHS: usize = 10;
+
+// Fisher-Yates shuffling
+fn shuffle_together<A, B>(a: &mut Vec<A>, b: &mut Vec<B>, rng: &mut Marsaglia) {
+    let n = a.len();
+    for i in (1..n).rev() {
+        let j = (rng.uni() * (i + 1) as f64) as usize;
+        a.swap(i, j);
+        b.swap(i, j);
+    }
+}
+
+fn train_many(ensemble_size: usize) -> Result<(), MnistError> {
     let mut rng = Marsaglia::new(42, 0, 0, 0);
     let data = Mnist::load("MNIST")?;
 
     // collect pixels into owned arrays
-    //let mut train_images: Vec<[f64; 784]> = data.train_images.iter().map(|img| img.as_f64_array()).collect();
-    //let test_images: Vec<[f64; 784]> = data.test_images.iter().map(|img| img.as_f64_array()).collect();
     let mut train_images: Vec<[u8; 784]> = data.train_images.iter().map(|img| img.pixels).collect();
     let test_images: Vec<[u8; 784]> = data.test_images.iter().map(|img| img.pixels).collect();
     let mut train_labels: Vec<u8> = data.train_labels.clone();
-    //let mut model = Perceptron::<784, 10>::new(&mut rng);
-    let mut model = IntegerPerceptron::<784, 10>::new(&mut rng);
 
-    const MAX_EPOCHS: usize = 10;
-    for epoch in 0..MAX_EPOCHS {
-        // Shuffle training samples
-        let n = train_images.len();
-        for i in (1..n).rev() {
-            let j = (rng.uni() * (i + 1) as f64) as usize;
-            train_images.swap(i, j);
-            train_labels.swap(i, j);
+    let mut models: Vec<IntegerPerceptron<784, 10>> = (0..ensemble_size)
+        .map(|_| IntegerPerceptron::new(&mut rng))
+        .collect();
+
+    for (i, model) in models.iter_mut().enumerate() {
+        for epoch in 0..MAX_EPOCHS {
+            shuffle_together(&mut train_images, &mut train_labels, &mut rng);
+            let errors = model.train(&train_images, &train_labels);
+            let rate = (100 * errors) as f64 / train_images.len() as f64;
+            println!("Model {i}/{ensemble_size} - Epoch {epoch}: errors = {errors} = {rate:.3}%");
         }
-
-        //let lr = 1.0;
-        //let err = model.train(&train_images, &train_labels, lr);
-        let errors = model.train(&train_images, &train_labels);
-        let total = train_images.len();
-        let rate = (100 * errors) as f64 / total as f64;
-        println!("Epoch {epoch}: errors = {errors}/{total} =  = {rate:.3}%");
-
-        //calc_stat(&model);
     }
 
+    // Evaluate with majority voting
     let correct = test_images
         .iter()
         .zip(data.test_labels.iter())
-        .filter(|(image, label)| model.classify(image) == **label as usize)
+        .filter(|(image, label)| {
+            let mut votes = [0usize; 10];
+            for model in &models {
+                votes[model.classify(image)] += 1;
+            }
+            votes
+                .iter()
+                .enumerate()
+                .max_by_key(|&(_, v)| v)
+                .map(|(i, _)| i)
+                .unwrap()
+                == **label as usize
+        })
         .count();
-    let total = data.test_images.len();
-    let acc = 100.0 * correct as f64 / total as f64;
 
-    println!("Accuracy: {correct}/{total} = {acc:.2}%");
+    let total = test_images.len();
+    let acc = 100.0 * correct as f64 / total as f64;
+    println!("Ensemble Accuracy: {correct}/{total} = {acc:.2}%");
 
     Ok(())
+}
+fn main() -> Result<(), MnistError> {
+    let args = Args::parse();
+    train_many(args.ensemble_size)
 }
