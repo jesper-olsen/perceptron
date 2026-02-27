@@ -1,5 +1,5 @@
-pub mod perceptron;
 pub mod integer_perceptron;
+//pub mod perceptron;
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right

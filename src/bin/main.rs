@@ -1,4 +1,5 @@
-use ferro_cell::perceptron::Perceptron;
+//use ferro_cell::perceptron::Perceptron;
+use ferro_cell::integer_perceptron::IntegerPerceptron;
 use mnist::{Mnist, error::MnistError};
 use stmc_rs::marsaglia::Marsaglia;
 
@@ -15,12 +16,15 @@ fn main() -> Result<(), MnistError> {
     let data = Mnist::load("MNIST")?;
 
     // collect pixels into owned arrays
-    let mut train_images: Vec<[f64; 784]> = data.train_images.iter().map(|img| img.as_f64_array()).collect();
-    let test_images: Vec<[f64; 784]> = data.test_images.iter().map(|img| img.as_f64_array()).collect();
+    //let mut train_images: Vec<[f64; 784]> = data.train_images.iter().map(|img| img.as_f64_array()).collect();
+    //let test_images: Vec<[f64; 784]> = data.test_images.iter().map(|img| img.as_f64_array()).collect();
+    let mut train_images: Vec<[u8; 784]> = data.train_images.iter().map(|img| img.pixels).collect();
+    let test_images: Vec<[u8; 784]> = data.test_images.iter().map(|img| img.pixels).collect();
     let mut train_labels: Vec<u8> = data.train_labels.clone();
-    let mut model = Perceptron::<784, 10>::new(&mut rng);
+    //let mut model = Perceptron::<784, 10>::new(&mut rng);
+    let mut model = IntegerPerceptron::<784, 10>::new(&mut rng);
 
-    const MAX_EPOCHS: usize = 5;
+    const MAX_EPOCHS: usize = 10;
     for epoch in 0..MAX_EPOCHS {
         // Shuffle training samples
         let n = train_images.len();
@@ -30,18 +34,20 @@ fn main() -> Result<(), MnistError> {
             train_labels.swap(i, j);
         }
 
-        let lr = 1.0;
-        let err = model.train(&train_images, &train_labels, lr);
-        println!("Epoch {epoch}: error rate = {:.3}", err);
+        //let lr = 1.0;
+        //let err = model.train(&train_images, &train_labels, lr);
+        let errors = model.train(&train_images, &train_labels);
+        let total = train_images.len();
+        let rate = (100 * errors) as f64 / total as f64;
+        println!("Epoch {epoch}: errors = {errors}/{total} =  = {rate:.3}%");
 
         //calc_stat(&model);
-
     }
 
     let correct = test_images
         .iter()
         .zip(data.test_labels.iter())
-        .filter(|(image, label)| model.classify(*image) == **label as usize)
+        .filter(|(image, label)| model.classify(image) == **label as usize)
         .count();
     let total = data.test_images.len();
     let acc = 100.0 * correct as f64 / total as f64;

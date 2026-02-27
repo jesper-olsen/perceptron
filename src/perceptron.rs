@@ -19,9 +19,7 @@ impl<const IDIM: usize, const ODIM: usize> Perceptron<IDIM, ODIM> {
     pub fn new(rng: &mut Marsaglia) -> Self {
         let norm = (2.0 / IDIM as f64).sqrt();
         Self {
-            weights: array::from_fn(|_| {
-                array::from_fn(|_| rng.gauss() * norm)
-            }),
+            weights: array::from_fn(|_| array::from_fn(|_| rng.gauss() * norm)),
         }
     }
 
@@ -57,7 +55,7 @@ impl<const IDIM: usize, const ODIM: usize> Perceptron<IDIM, ODIM> {
 
             if predicted != target as usize {
                 errors += 1.0;
-                
+
                 // Perceptron Update Rule:
                 // Increase weights for the correct class
                 // Decrease weights for the incorrectly predicted class
@@ -76,7 +74,8 @@ impl<const IDIM: usize, const ODIM: usize> fmt::Display for Perceptron<IDIM, ODI
         writeln!(f, "Multi-Class Perceptron ({} -> {})", IDIM, ODIM)?;
         for (i, row) in self.weights.iter().enumerate() {
             write!(f, "Digit {}: ", i)?;
-            for w in row.iter().take(5) { // Print first 5 weights for brevity
+            for w in row.iter().take(5) {
+                // Print first 5 weights for brevity
                 write!(f, "{w:>8.2} ")?;
             }
             writeln!(f, "...")?;
