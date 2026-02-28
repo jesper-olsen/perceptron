@@ -10,7 +10,7 @@ Clone the repository:
 
 ```sh
 git clone https://github.com/jesper-olsen/perceptron.git
-cd engram
+cd perceptron 
 ```
 
 [Download](https://github.com/jesper-olsen/mnist-rs) the MNIST dataset.
